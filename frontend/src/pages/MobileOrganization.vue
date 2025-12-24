@@ -69,7 +69,6 @@
                   <FeatherIcon name="link" class="h-4 w-4" />
                 </Button>
                 <Button
-                  v-if="canDelete"
                   :label="__('Delete')"
                   theme="red"
                   size="sm"
@@ -83,16 +82,11 @@
         </div>
       </template>
     </FileUploader>
-    <Tabs
-      as="div"
-      v-model="tabIndex"
-      :tabs="tabs"
-      class="flex flex-1 overflow-auto flex-col [&_[role='tablist']]:gap-7.5 [&_[role='tablist']]:px-4 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-item="{ tab, selected }">
+    <Tabs as="div" v-model="tabIndex" :tabs="tabs" class="overflow-auto">
+      <TabList class="!px-4" v-slot="{ tab, selected }">
         <button
           v-if="tab.name !== 'Details'"
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
+          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:border-outline-gray-3 hover:text-ink-gray-9"
           :class="{ 'text-ink-gray-9': selected }"
         >
           <component v-if="tab.icon" :is="tab.icon" class="h-5" />
@@ -107,8 +101,8 @@
             {{ tab.count }}
           </Badge>
         </button>
-      </template>
-      <template #tab-panel="{ tab }">
+      </TabList>
+      <TabPanel v-slot="{ tab }">
         <div v-if="tab.name == 'Details'">
           <div
             v-if="sections.data"
@@ -145,7 +139,7 @@
             <div>{{ __('No {0} Found', [__(tab.label)]) }}</div>
           </div>
         </div>
-      </template>
+      </TabPanel>
     </Tabs>
   </div>
 </template>
@@ -168,18 +162,15 @@ import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
 import { getView } from '@/utils/view'
-import {
-  formatDate,
-  timeAgo,
-  validateIsImageFile,
-  openWebsite as openExternalWebsite,
-} from '@/utils'
+import { formatDate, timeAgo, validateIsImageFile } from '@/utils'
 import {
   Breadcrumbs,
   Avatar,
   FileUploader,
   Dropdown,
   Tabs,
+  TabList,
+  TabPanel,
   call,
   createListResource,
   usePageMeta,
@@ -205,12 +196,10 @@ const { doctypeMeta } = getMeta('CRM Organization')
 const route = useRoute()
 const router = useRouter()
 
-const { document: organization, permissions } = useDocument(
+const { document: organization } = useDocument(
   'CRM Organization',
   props.organizationId,
 )
-
-const canDelete = computed(() => permissions.data?.permissions?.delete || false)
 
 const breadcrumbs = computed(() => {
   let items = [{ label: __('Organizations'), route: { name: 'Organizations' } }]
@@ -289,12 +278,8 @@ async function deleteOrganization() {
 }
 
 function openWebsite() {
-  if (!organization.doc.website) {
-    toast.error(__('No website found'))
-    return
-  }
-
-  openExternalWebsite(organization.doc.website)
+  if (!organization.doc.website) toast.error(__('No website found'))
+  else window.open(organization.doc.website, '_blank')
 }
 
 const sections = createResource({

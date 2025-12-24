@@ -106,8 +106,6 @@ function convertToDeal(selections, unselectAll) {
 }
 
 function deleteValues(selections, unselectAll) {
-  unselectAllAction.value = unselectAll
-
   const selectedDocs = Array.from(selections)
   if (selectedDocs.length == 1) {
     showDeleteDocModal.value = {
@@ -219,12 +217,6 @@ function bulkActions(selections, unselectAll) {
 }
 
 function reload(unselectAll) {
-  showDeleteDocModal.value = {
-    showLinkedDocsModal: false,
-    showDeleteModal: false,
-    docname: null,
-  }
-
   unselectAllAction.value?.()
   unselectAll?.()
   list.value?.reload()

@@ -18,7 +18,7 @@
         @click="handleSelect(s)"
       >
         <EmailProviderIcon
-          :label="s.name"
+          :service-name="s.name"
           :logo="s.icon"
           :selected="selectedService?.name === s?.name"
         />

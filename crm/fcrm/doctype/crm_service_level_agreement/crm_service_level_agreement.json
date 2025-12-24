@@ -7,11 +7,10 @@
  "engine": "InnoDB",
  "field_order": [
   "apply_on",
-  "sla_name",
   "column_break_uxua",
+  "sla_name",
   "enabled",
   "default",
-  "rolling_responses",
   "section_break_nevd",
   "start_date",
   "end_date",
@@ -112,18 +111,11 @@
    "fieldtype": "Link",
    "label": "Holiday List",
    "options": "CRM Holiday List"
-  },
-  {
-   "default": "0",
-   "description": "Restart the SLA each time the customer replies (status changes to Open) and fulfill it when marked as Replied",
-   "fieldname": "rolling_responses",
-   "fieldtype": "Check",
-   "label": "Rolling Responses"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-10 19:38:32.968791",
+ "modified": "2024-01-19 21:54:25.831753",
  "modified_by": "Administrator",
  "module": "FCRM",
  "name": "CRM Service Level Agreement",
@@ -143,7 +135,6 @@
    "write": 1
   }
  ],
- "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

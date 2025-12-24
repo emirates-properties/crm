@@ -53,13 +53,9 @@
     </div>
   </div>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
-    <Tabs
-      as="div"
-      v-model="tabIndex"
-      :tabs="tabs"
-      class="flex flex-1 overflow-auto flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-3 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-panel="{ tab }">
+    <Tabs as="div" v-model="tabIndex" :tabs="tabs" class="overflow-auto">
+      <TabList class="!px-3" />
+      <TabPanel v-slot="{ tab }">
         <div v-if="tab.name == 'Details'">
           <SLASection
             v-if="doc.sla_status"
@@ -223,7 +219,7 @@
           @beforeSave="beforeStatusChange"
           @afterSave="reloadAssignees"
         />
-      </template>
+      </TabPanel>
     </Tabs>
   </div>
   <ErrorPage
@@ -309,6 +305,8 @@ import {
   Dropdown,
   Avatar,
   Tabs,
+  TabList,
+  TabPanel,
   Breadcrumbs,
   call,
   usePageMeta,

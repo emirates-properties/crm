@@ -7,12 +7,6 @@
         </template>
       </Breadcrumbs>
     </template>
-    <template #right-header>
-      <CustomActions
-        v-if="contact._actions?.length"
-        :actions="contact._actions"
-      />
-    </template>
   </LayoutHeader>
   <div v-if="contact.doc" ref="parentRef" class="flex h-full">
     <Resizer
@@ -103,7 +97,6 @@
                   @click="callEnabled && makeCall(contact.doc.mobile_no)"
                 />
                 <Button
-                  v-if="canDelete"
                   :label="__('Delete')"
                   theme="red"
                   size="sm"
@@ -120,22 +113,17 @@
         class="flex flex-1 flex-col justify-between overflow-hidden"
       >
         <SidePanelLayout
-          :sections="parsedSections"
+          :sections="sections.data"
           doctype="Contact"
           :docname="contact.doc.name"
           @reload="sections.reload"
         />
       </div>
     </Resizer>
-    <Tabs
-      as="div"
-      v-model="tabIndex"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
+    <Tabs as="div" v-model="tabIndex" :tabs="tabs">
       <template #tab-item="{ tab, selected }">
         <button
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
+          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:border-outline-gray-3 hover:text-ink-gray-9"
           :class="{ 'text-ink-gray-9': selected }"
         >
           <component v-if="tab.icon" :is="tab.icon" class="h-5" />
@@ -195,13 +183,7 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
-import CustomActions from '@/components/CustomActions.vue'
-import {
-  formatDate,
-  timeAgo,
-  validateIsImageFile,
-  setupCustomizations,
-} from '@/utils'
+import { formatDate, timeAgo, validateIsImageFile } from '@/utils'
 import { getView } from '@/utils/view'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
@@ -223,11 +205,11 @@ import {
   Dropdown,
   toast,
 } from 'frappe-ui'
-import { ref, computed, h, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, h } from 'vue'
+import { useRoute } from 'vue-router'
 
 const { brand } = getSettings()
-const { makeCall, $dialog, $socket } = globalStore()
+const { makeCall } = globalStore()
 
 const { getUser } = usersStore()
 const { getOrganization } = organizationsStore()
@@ -242,18 +224,11 @@ const props = defineProps({
 })
 
 const route = useRoute()
-const router = useRouter()
 
 const errorTitle = ref('')
 const errorMessage = ref('')
 
-const {
-  document: contact,
-  permissions,
-  scripts,
-} = useDocument('Contact', props.contactId)
-
-const canDelete = computed(() => permissions.data?.permissions?.delete || false)
+const { document: contact } = useDocument('Contact', props.contactId)
 
 const breadcrumbs = computed(() => {
   let items = [{ label: __('Contacts'), route: { name: 'Contacts' } }]
@@ -318,7 +293,9 @@ const tabs = [
 const deals = createResource({
   url: 'crm.api.contact.get_linked_deals',
   cache: ['deals', props.contactId],
-  params: { contact: props.contactId },
+  params: {
+    contact: props.contactId,
+  },
   auto: true,
 })
 
@@ -333,110 +310,118 @@ const sections = createResource({
   cache: ['sidePanelSections', 'Contact'],
   params: { doctype: 'Contact' },
   auto: true,
+  transform: (data) => computed(() => getParsedSections(data)),
 })
 
-const parsedSections = computed(() => {
-  if (!sections.data) return []
-  return sections.data.map((section) => ({
-    ...section,
-    columns: section.columns.map((column) => ({
-      ...column,
-      fields: column.fields.map((field) => {
+function getParsedSections(_sections) {
+  return _sections.map((section) => {
+    section.columns = section.columns.map((column) => {
+      column.fields = column.fields.map((field) => {
         if (field.fieldname === 'email_id') {
           return {
             ...field,
             read_only: false,
             fieldtype: 'Dropdown',
-            options: (contact.doc?.email_ids || []).map((email) => ({
-              name: email.name,
-              value: email.email_id,
-              selected: email.email_id === contact.doc.email_id,
-              placeholder: 'john@doe.com',
-              onClick: () => setAsPrimary('email', email.email_id),
-              onSave: (option, isNew) =>
-                isNew
-                  ? createNew('email', option.value)
-                  : editOption(
-                      'Contact Email',
-                      option.name,
-                      'email_id',
-                      option.value,
-                    ),
-              onDelete: async (option, isNew) => {
-                contact.doc.email_ids = contact.doc.email_ids.filter(
-                  (e) => e.name !== option.name,
-                )
-                if (!isNew) await deleteOption('Contact Email', option.name)
-              },
-            })),
+            options:
+              contact.doc?.email_ids?.map((email) => {
+                return {
+                  name: email.name,
+                  value: email.email_id,
+                  selected: email.email_id === contact.doc.email_id,
+                  placeholder: 'john@doe.com',
+                  onClick: () => {
+                    setAsPrimary('email', email.email_id)
+                  },
+                  onSave: (option, isNew) => {
+                    if (isNew) {
+                      createNew('email', option.value)
+                    } else {
+                      editOption(
+                        'Contact Email',
+                        option.name,
+                        'email_id',
+                        option.value
+                      )
+                    }
+                  },
+                  onDelete: async (option, isNew) => {
+                    contact.doc.email_ids = contact.doc.email_ids.filter(
+                      (email) => email.name !== option.name,
+                    )
+                    !isNew && (await deleteOption('Contact Email', option.name))
+                  },
+                }
+              }) || [],
             create: () => {
-              // Add a temporary new option locally (mirrors original behavior)
-              contact.doc.email_ids = [
-                ...(contact.doc.email_ids || []),
-                {
-                  name: 'new-1',
-                  value: '',
-                  selected: false,
-                  isNew: true,
-                },
-              ]
+              contact.doc?.email_ids?.push({
+                name: 'new-1',
+                value: '',
+                selected: false,
+                isNew: true,
+              })
             },
           }
-        }
-        if (field.fieldname === 'mobile_no') {
+        } else if (field.fieldname === 'mobile_no') {
           return {
             ...field,
             read_only: false,
             fieldtype: 'Dropdown',
-            options: (contact.doc?.phone_nos || []).map((phone) => ({
-              name: phone.name,
-              value: phone.phone,
-              selected: phone.phone === contact.doc.mobile_no,
-              onClick: () => setAsPrimary('mobile_no', phone.phone),
-              onSave: (option, isNew) =>
-                isNew
-                  ? createNew('phone', option.value)
-                  : editOption(
-                      'Contact Phone',
-                      option.name,
-                      'phone',
-                      option.value,
-                    ),
-              onDelete: async (option, isNew) => {
-                contact.doc.phone_nos = contact.doc.phone_nos.filter(
-                  (p) => p.name !== option.name,
-                )
-                if (!isNew) await deleteOption('Contact Phone', option.name)
-              },
-            })),
+            options:
+              contact.doc?.phone_nos?.map((phone) => {
+                return {
+                  name: phone.name,
+                  value: phone.phone,
+                  selected: phone.phone === contact.doc.mobile_no,
+                  onClick: () => {
+                    setAsPrimary('mobile_no', phone.phone)
+                  },
+                  onSave: (option, isNew) => {
+                    if (isNew) {
+                      createNew('phone', option.value)
+                    } else {
+                      editOption(
+                        'Contact Phone',
+                        option.name,
+                        'phone',
+                        option.value
+                      )
+                    }
+                  },
+                  onDelete: async (option, isNew) => {
+                    contact.doc.phone_nos = contact.doc.phone_nos.filter(
+                      (phone) => phone.name !== option.name,
+                    )
+                    !isNew && (await deleteOption('Contact Phone', option.name))
+                  },
+                }
+              }) || [],
             create: () => {
-              contact.doc.phone_nos = [
-                ...(contact.doc.phone_nos || []),
-                {
-                  name: 'new-1',
-                  value: '',
-                  selected: false,
-                  isNew: true,
-                },
-              ]
+              contact.doc?.phone_nos?.push({
+                name: 'new-1',
+                value: '',
+                selected: false,
+                isNew: true,
+              })
             },
           }
-        }
-        if (field.fieldname === 'address') {
+        } else if (field.fieldname === 'address') {
           return {
             ...field,
-            create: (_value, close) => {
+            create: (value, close) => {
               openAddressModal()
-              close && close()
+              close()
             },
             edit: (address) => openAddressModal(address),
           }
+        } else {
+          return field
         }
-        return field
-      }),
-    })),
-  }))
-})
+      })
+      return column
+    })
+    return section
+  })
+}
 
 async function setAsPrimary(field, value) {
   let d = await call('crm.api.contact.set_as_primary', {
@@ -560,26 +545,4 @@ function openAddressModal(_address) {
     address: _address,
   }
 }
-
-// Setup custom actions from Form Scripts
-watch(
-  () => contact.doc,
-  async (_doc) => {
-    if (scripts.data?.length) {
-      let s = await setupCustomizations(scripts.data, {
-        doc: _doc,
-        $dialog,
-        $socket,
-        router,
-        toast,
-        updateField: contact.setValue.submit,
-        createToast: toast.create,
-        deleteDoc: deleteContact,
-        call,
-      })
-      contact._actions = s.actions || []
-    }
-  },
-  { once: true },
-)
 </script>

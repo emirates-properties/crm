@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { usersStore } from '@/stores/users'
+import { userResource } from '@/stores/user'
 import { sessionStore } from '@/stores/session'
 import { viewsStore } from '@/stores/views'
 
@@ -94,11 +94,6 @@ const routes = [
     name: 'Invalid Page',
     component: () => import('@/pages/InvalidPage.vue'),
   },
-  {
-    path: '/not-permitted',
-    name: 'Not Permitted',
-    component: () => import('@/pages/NotPermitted.vue'),
-  },
 ]
 
 const handleMobileView = (componentName) => {
@@ -112,19 +107,10 @@ let router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const { isLoggedIn } = sessionStore()
-  const { users, isWebsiteUser } = usersStore()
 
-  if (isLoggedIn && !users.fetched) {
-    try {
-      await users.promise
-    } catch (error) {
-      console.error('Error loading users', error)
-    }
-  }
+  isLoggedIn && (await userResource.promise)
 
-  if (isLoggedIn && to.name !== 'Not Permitted' && isWebsiteUser()) {
-    next({ name: 'Not Permitted' })
-  } else if (to.name === 'Home' && isLoggedIn) {
+  if (to.name === 'Home' && isLoggedIn) {
     const { views, getDefaultView } = viewsStore()
     await views.promise
 
@@ -138,11 +124,7 @@ router.beforeEach(async (to, from, next) => {
     route_name = route_name || 'Leads'
 
     if (name && !is_standard) {
-      next({
-        name: route_name,
-        params: { viewType: type },
-        query: { view: name },
-      })
+      next({ name: route_name, params: { viewType: type }, query: { view: name } })
     } else {
       next({ name: route_name, params: { viewType: type } })
     }

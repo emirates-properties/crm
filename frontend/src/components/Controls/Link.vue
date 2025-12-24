@@ -127,14 +127,6 @@ watchDebounced(
   { debounce: 300, immediate: true },
 )
 
-watchDebounced(
-  () => props.filters,
-  () => {
-    reload('', true)
-  },
-  { debounce: 300, immediate: true },
-)
-
 const options = createResource({
   url: 'frappe.desk.search.search_link',
   cache: [props.doctype, text.value, props.hideMe, props.filters],
@@ -162,14 +154,13 @@ const options = createResource({
   },
 })
 
-function reload(val, force=false) {
+function reload(val) {
   if (!props.doctype) return
   if (
-    !force &&
     options.data?.length &&
     val === options.params?.txt &&
     props.doctype === options.params?.doctype
-  ) 
+  )
     return
 
   options.update({

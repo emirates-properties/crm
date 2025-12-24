@@ -1,4 +1,4 @@
-import frappeUIPreset from 'frappe-ui/tailwind'
+import frappeUIPreset from 'frappe-ui/src/tailwind/preset'
 
 export default {
   presets: [frappeUIPreset],

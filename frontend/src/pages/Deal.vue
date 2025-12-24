@@ -37,12 +37,7 @@
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
-    <Tabs
-      as="div"
-      v-model="tabIndex"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
+    <Tabs as="div" v-model="tabIndex" :tabs="tabs">
       <template #tab-panel>
         <Activities
           ref="activities"
@@ -58,7 +53,7 @@
     </Tabs>
     <Resizer side="right" class="flex flex-col justify-between border-l">
       <div
-        class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg font-medium text-ink-gray-9"
+        class="flex h-10.5 cursor-copy items-center border-b px-5 py-2.5 text-lg font-medium text-ink-gray-9"
         @click="copyToClipboard(dealId)"
       >
         {{ __(dealId) }}
@@ -113,7 +108,6 @@
             />
 
             <Button
-              v-if="canDelete"
               :tooltip="__('Delete')"
               variant="subtle"
               icon="trash-2"
@@ -241,26 +235,16 @@
                         </div>
                       </div>
                     </template>
-                    <div class="flex flex-col gap-1.5 text-base">
-                      <div
-                        v-if="contact.email"
-                        class="flex items-center gap-3 pb-1.5 pl-1 pt-4 text-ink-gray-8"
-                      >
+                    <div
+                      class="flex flex-col gap-1.5 text-base text-ink-gray-8"
+                    >
+                      <div class="flex items-center gap-3 pb-1.5 pl-1 pt-4">
                         <Email2Icon class="h-4 w-4" />
                         {{ contact.email }}
                       </div>
-                      <div
-                        v-if="contact.mobile_no"
-                        class="flex items-center gap-3 p-1 py-1.5 text-ink-gray-8"
-                      >
+                      <div class="flex items-center gap-3 p-1 py-1.5">
                         <PhoneIcon class="h-4 w-4" />
                         {{ contact.mobile_no }}
-                      </div>
-                      <div
-                        v-if="!contact.email && !contact.mobile_no"
-                        class="flex items-center justify-center py-4 text-sm text-ink-gray-4"
-                      >
-                        {{ __('No details added') }}
                       </div>
                     </div>
                   </Section>
@@ -415,10 +399,10 @@ const errorTitle = ref('')
 const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
 
-const { triggerOnChange, assignees, permissions, document, scripts, error } =
-  useDocument('CRM Deal', props.dealId)
-
-const canDelete = computed(() => permissions.data?.permissions?.delete || false)
+const { triggerOnChange, assignees, document, scripts, error } = useDocument(
+  'CRM Deal',
+  props.dealId,
+)
 
 const doc = computed(() => document.doc || {})
 

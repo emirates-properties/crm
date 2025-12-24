@@ -265,16 +265,6 @@
                     :disabled="Boolean(field.read_only)"
                     @change="fieldChange(flt($event.target.value), field, row)"
                   />
-                  <Autocomplete
-                    v-else-if="field.fieldtype === 'Autocomplete'"
-                    class="text-sm text-ink-gray-8"
-                    :modelValue="row[field.fieldname]"
-                    @update:modelValue="(v) => row[field.fieldname] = typeof v == 'object' ? v.value : v"
-                    @change="(v) => fieldChange(typeof v == 'object' ? v.value : v, field, row)"
-                    :options="field.options"
-                    :placeholder="field.placeholder"
-                    :disabled="Boolean(field.read_only)"
-                  />
                   <FormControl
                     v-else
                     class="text-sm text-ink-gray-8"
@@ -363,7 +353,6 @@ import {
   DatePicker,
   Tooltip,
   dayjs,
-  Autocomplete
 } from 'frappe-ui'
 import Draggable from 'vuedraggable'
 import { ref, reactive, computed, inject, provide } from 'vue'
@@ -385,10 +374,6 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  overrides: {
-    type: Object,
-    default: () => ({}),
-  }
 })
 
 const triggerOnChange = inject('triggerOnChange', () => {})
@@ -457,17 +442,10 @@ function getFieldObj(field) {
     })
   }
 
-  const fieldObjWithFilters ={
+  return {
     ...field,
     filters: field.link_filters && JSON.parse(field.link_filters),
     placeholder: field.placeholder || field.label,
-  }
-  
-  return {
-    ...fieldObjWithFilters,
-    ...props.overrides.fields?.find(
-      (f) => f.fieldname === field.fieldname,
-    ),
   }
 }
 

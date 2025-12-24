@@ -9,7 +9,7 @@
     <div class="w-fit">
       <EmailProviderIcon
         :logo="emailIcon[accountData.service]"
-        :label="accountData.service"
+        :service-name="accountData.service"
       />
     </div>
     <!-- banner for setting up email account -->

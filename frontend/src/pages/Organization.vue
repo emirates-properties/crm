@@ -7,12 +7,6 @@
         </template>
       </Breadcrumbs>
     </template>
-    <template #right-header>
-      <CustomActions
-        v-if="organization._actions?.length"
-        :actions="organization._actions"
-      />
-    </template>
   </LayoutHeader>
   <div v-if="organization.doc" ref="parentRef" class="flex h-full">
     <Resizer
@@ -36,14 +30,14 @@
                     :image="organization.doc.organization_logo"
                   />
                   <component
-                    :is="organization.doc.organization_logo ? Dropdown : 'div'"
+                    :is="organization.doc.image ? Dropdown : 'div'"
                     v-bind="
-                      organization.doc.organization_logo
+                      organization.doc.image
                         ? {
                             options: [
                               {
                                 icon: 'upload',
-                                label: organization.doc.organization_logo
+                                label: organization.doc.image
                                   ? __('Change image')
                                   : __('Upload image'),
                                 onClick: openFileSelector,
@@ -86,7 +80,6 @@
               </div>
               <div class="flex gap-1.5">
                 <Button
-                  v-if="canDelete"
                   :label="__('Delete')"
                   theme="red"
                   size="sm"
@@ -112,19 +105,13 @@
           doctype="CRM Organization"
           :docname="organization.doc.name"
           @reload="sections.reload"
-          @beforeFieldChange="beforeFieldChange"
         />
       </div>
     </Resizer>
-    <Tabs
-      as="div"
-      v-model="tabIndex"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tablist']]:gap-7.5 [&_[role='tablist']]:px-5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
+    <Tabs as="div" v-model="tabIndex" :tabs="tabs">
       <template #tab-item="{ tab, selected }">
         <button
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
+          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:border-outline-gray-3 hover:text-ink-gray-9"
           :class="{ 'text-ink-gray-9': selected }"
         >
           <component v-if="tab.icon" :is="tab.icon" class="h-5" />
@@ -193,37 +180,30 @@ import WebsiteIcon from '@/components/Icons/WebsiteIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
-import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
-import CustomActions from '@/components/CustomActions.vue'
 import { showAddressModal, addressProps } from '@/composables/modals'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
-import { globalStore } from '@/stores/global'
 import { getMeta } from '@/stores/meta'
 import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
 import { getView } from '@/utils/view'
+import { formatDate, timeAgo, validateIsImageFile } from '@/utils'
 import {
-  formatDate,
-  timeAgo,
-  validateIsImageFile,
-  setupCustomizations,
-  openWebsite as openExternalWebsite,
-} from '@/utils'
-import {
+  Tooltip,
   Breadcrumbs,
   Avatar,
   FileUploader,
   Dropdown,
   Tabs,
+  call,
   createListResource,
   usePageMeta,
   createResource,
   toast,
-  call,
 } from 'frappe-ui'
-import { h, computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { h, computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
 
 const props = defineProps({
   organizationId: {
@@ -233,26 +213,21 @@ const props = defineProps({
 })
 
 const { brand } = getSettings()
-const { $dialog, $socket } = globalStore()
 const { getUser } = usersStore()
 const { getDealStatus } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Organization')
 
 const route = useRoute()
-const router = useRouter()
 
 const errorTitle = ref('')
 const errorMessage = ref('')
 
 const showDeleteLinkedDocModal = ref(false)
 
-const {
-  document: organization,
-  permissions,
-  scripts,
-} = useDocument('CRM Organization', props.organizationId)
-
-const canDelete = computed(() => permissions.data?.permissions?.delete || false)
+const { document: organization } = useDocument(
+  'CRM Organization',
+  props.organizationId,
+)
 
 const breadcrumbs = computed(() => {
   let items = [{ label: __('Organizations'), route: { name: 'Organizations' } }]
@@ -302,27 +277,14 @@ async function deleteOrganization() {
   showDeleteLinkedDocModal.value = true
 }
 
-function changeOrganizationImage(file) {
-  organization.setValue.submit({
-    organization_logo: file?.file_url || null,
+async function changeOrganizationImage(file) {
+  await call('frappe.client.set_value', {
+    doctype: 'CRM Organization',
+    name: props.organizationId,
+    fieldname: 'organization_logo',
+    value: file?.file_url || '',
   })
-}
-
-function beforeFieldChange(data) {
-  if (data?.hasOwnProperty('organization_name')) {
-    call('frappe.client.rename_doc', {
-      doctype: 'CRM Organization',
-      old_name: props.organizationId,
-      new_name: data.organization_name,
-    }).then(() => {
-      router.push({
-        name: 'Organization',
-        params: { organizationId: data.organization_name },
-      })
-    })
-  } else {
-    organization.save.submit()
-  }
+  organization.reload()
 }
 
 function website(url) {
@@ -330,12 +292,8 @@ function website(url) {
 }
 
 function openWebsite() {
-  if (!organization.doc.website) {
-    toast.error(__('No website found'))
-    return
-  }
-
-  openExternalWebsite(organization.doc.website)
+  if (!organization.doc.website) toast.error(__('No website found'))
+  else window.open(organization.doc.website, '_blank')
 }
 
 const sections = createResource({
@@ -564,26 +522,4 @@ function openAddressModal(_address) {
     address: _address,
   }
 }
-
-// Setup custom actions from Form Scripts
-watch(
-  () => organization.doc,
-  async (_doc) => {
-    if (scripts.data?.length) {
-      let s = await setupCustomizations(scripts.data, {
-        doc: _doc,
-        $dialog,
-        $socket,
-        router,
-        toast,
-        updateField: organization.setValue.submit,
-        createToast: toast.create,
-        deleteDoc: deleteOrganization,
-        call,
-      })
-      organization._actions = s.actions || []
-    }
-  },
-  { once: true },
-)
 </script>
